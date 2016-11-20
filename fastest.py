@@ -36,7 +36,7 @@ def openfile(trace_file, dir):
     ptr = open(tmp_file, "a")
     with open(file_name, 'r') as f:
         trace_lines = f.readlines()
-    flen = len(trace_lines)
+    flen = len(trace_lines) - 1
     for line in range(flen):
         if sub_str in trace_lines[line]:
             list_obj = []
@@ -60,22 +60,34 @@ def openfile(trace_file, dir):
 @fn_timer
 def analysis(tmp_file, dir):
     counter_dict = {}
-    tmp2 = "pipe.txt"
+    set_mode = " -64 "
+    tmp2 = "command.sh"
+    out = "out.txt"
     num = 1
-    tmp2_file = os.path.join(dir, tmp2)
+    sh_file = os.path.join(dir, tmp2)
+    out_file = os.path.join(dir, out)
     if os.path.isfile(tmp2):
-        os.remove(tmp2_file)
+        os.remove(sh_file)
+    if os.path.isfile(out):
+        os.remove(out_file)
 
     op_line = open(tmp_file,'r').readlines()
-    pipe = open(tmp2_file, 'a')
+    pipe = open(sh_file, 'a')
+    Popen("chmod a+x command.sh", shell=True)
     flen = len(op_line)
     for line in range(flen):
         opcode, inst = op_line[line].split('| ')
-        n = inst.strip('\n')
-        ud_insn_asm(opcode, pipe)
+        command = "echo " + opcode + "|udcli" + set_mode + "-x -att -noff >>out.txt" + "\n"
+        pipe.write(command)
 
     pipe.close()
-    doc = open(tmp2_file,'r')
+
+    # os.system("chmod a+x command.sh")
+    os.system("./command.sh")
+  
+    #Popen("./command.sh", shell=True).wait()
+
+    doc = open(out_file,'r')
     instructions = doc.readlines()
     ilen = len(instructions)
     for l in range(ilen):
@@ -90,15 +102,10 @@ def analysis(tmp_file, dir):
                 counter_dict[instruct].append(num)
             num += 1
 
+    # os.remove(tmp_file)
+    # os.remove(sh_file)
+    # os.remove(out_file)
     return counter_dict
-
-
-def ud_insn_asm(ud_obj, pipe):
-    set_mode = " -64 "
-    command = "echo " + ud_obj + "|udcli" + set_mode + "-x -att -noff"
-    p = Popen(command, bufsize=42, shell=True, stdout=pipe)
-    #if p.wait() != 0:
-    #    print "There were some errors"
 
 
 def gen_file(result_file, counter):
